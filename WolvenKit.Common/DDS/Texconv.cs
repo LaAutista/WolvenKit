@@ -26,7 +26,7 @@ namespace WolvenKit.Common.DDS
                 //{
 
                 //}
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
         }
 
@@ -40,7 +40,7 @@ namespace WolvenKit.Common.DDS
             }
             else
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
         }
 
@@ -57,7 +57,7 @@ namespace WolvenKit.Common.DDS
             }
             else
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
         }
 
@@ -70,7 +70,7 @@ namespace WolvenKit.Common.DDS
             }
             else
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
         }
 
@@ -83,7 +83,7 @@ namespace WolvenKit.Common.DDS
             }
             else
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
         }
 
@@ -139,7 +139,7 @@ namespace WolvenKit.Common.DDS
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
 
             RedImage? image = null;
@@ -222,7 +222,7 @@ namespace WolvenKit.Common.DDS
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
 
             if (textureType == EUncookExtension.dds)
@@ -282,7 +282,7 @@ namespace WolvenKit.Common.DDS
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new NotImplementedException();
+                throw new PlatformNotSupportedException("The DirectXTex backend is currently available only on Windows.");
             }
 
             if (inExtension == EUncookExtension.dds)
