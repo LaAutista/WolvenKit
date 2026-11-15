@@ -14,7 +14,7 @@ public class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var vm = new MainViewModel();
+            var vm = new MainViewModel(Services.LinuxSettings.DefaultPath);
             vm.DetectInstalls();
             // "wolvenkit some.archive" opens that archive (file manager "Open with")
             if (desktop.Args?.FirstOrDefault(File.Exists) is { } archive)

@@ -92,4 +92,28 @@ public class MainWindowTests
         Assert.False(vm.AddManualInstall(tmp.Path));
         Assert.Empty(vm.Installs);
     }
+
+    [Fact]
+    public void Manually_added_game_folder_is_remembered_across_restarts()
+    {
+        using var tmp = new TempDir();
+        var game = tmp.FakeGame("game");
+        var settings = Path.Combine(tmp.Path, "config", "wolvenkit", "settings.json");
+        Assert.True(new MainViewModel(settings).AddManualInstall(game));
+
+        var restarted = new MainViewModel(settings);
+        restarted.DetectInstalls();
+
+        Assert.Contains(restarted.Installs, i => i.RootPath == game && i.Source == "Manual");
+    }
+
+    [Fact]
+    public void Corrupt_settings_file_does_not_break_startup()
+    {
+        using var tmp = new TempDir();
+        var settings = Path.Combine(tmp.Path, "settings.json");
+        File.WriteAllText(settings, "{broken");
+
+        new MainViewModel(settings).DetectInstalls();
+    }
 }

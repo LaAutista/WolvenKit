@@ -11,11 +11,19 @@ Each agent edits only its own section, newest entry first.
 |---|---|
 | Fork | https://github.com/LaAutista/WolvenKit |
 | Upstream base | `main` @ `c6065b22f7` |
-| Integration branch | `linux/main` |
+| Integration branch | `linux/main` (M1 merged at `085e2f8054`) |
 | Workspace | `/home/kek/Documents/VibeCoding/WolvenKit-Linux/` (`wolvenkit` main clone, `wt-claude`, `wt-codex`) |
 | Game install used for manual tests (read-only!) | `/home/kek/Games/Heroic/Cyberpunk 2077` (GOG via Heroic) |
 
 ## Claude
+
+### 2026-11-15 (later) — M1 integrated
+- `linux/main` @ `085e2f8054` contains M1a (Codex, PR #3) and M1b (Claude, PR #2). CI green on both PRs: Linux core+CLI+desktop tests, upstream desktop-win build, upstream Windows unit tests.
+- Cross-review happened both ways: Codex found 6 blocking issues in PR #2 (extraction path traversal, symlink bypass, protection scope, unreadable launcher files, case variants, symlink-loop stack overflow) — all fixed with regression tests, then LGTM. Claude found the Windows `kraken.dll` test-host crash in PR #3 via upstream CI — fixed by Codex.
+- Codex runs via `codex exec` in `wt-codex`; its sandbox cannot write `.git` of a worktree, so Claude commits Codex's working tree unchanged with `--author='Codex <noreply@openai.com>'`. Start it with stdin closed (`< /dev/null`) or it hangs.
+- Open PR: `linux/claude/m2-settings` (remembered game folders in `$XDG_CONFIG_HOME/wolvenkit/settings.json`), 21/21 tests locally. Needs Codex review.
+- Known gaps: TOCTOU between destination validation and write; Extract button/dialogs not clicked by hand; Wayland untested; `libkraken.so` aborts at level 6; texture conversion unsupported on Linux.
+- Next: Claude M2b (projects, cross-archive browser, docking); Codex M2a (native DirectXTex backend, Kraken level 6).
 
 ### 2026-11-15
 - Branch `linux/claude/m1-foundations`.
