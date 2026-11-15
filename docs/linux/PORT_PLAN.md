@@ -96,7 +96,7 @@ dotnet WolvenKit.CLI/bin/Debug/net10.0/WolvenKit.CLI.dll unbundle <game>/archive
                                                                       # Unbundled 53/53 entries
 dotnet test Tests/WolvenKit.Linux.Tests/WolvenKit.Linux.Tests.csproj  # Passed 7/7 (2026-11-15): game detection, headless window, pack->list->extract round trip
 dotnet run --project WolvenKit.Linux -- <game>/archive/pc/content/basegame_2_mainmenu.archive
-                                                                      # window shows Heroic install, its archives (0 found on disk), 53 files (screenshot taken on X11)
+                                                                      # window shows Heroic install, its archive list (57 archives on disk), 53 files (screenshot taken on X11)
 ```
 
 Not verified yet for M1b: native file dialogs and the Extract button were not clicked by hand (the extract code path is covered by the headless test); Wayland session.
