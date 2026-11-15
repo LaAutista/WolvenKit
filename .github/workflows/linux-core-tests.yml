@@ -21,3 +21,5 @@ jobs:
         run: dotnet build WolvenKit.CLI/WolvenKit.CLI.csproj --configuration Release
       - name: Run portable unit tests and generated archive round trip
         run: dotnet test Tests/WolvenKit.UnitTests/WolvenKit.UnitTests.csproj --configuration Release --framework net10.0 --logger "console;verbosity=normal"
+      - name: Run Linux desktop app tests (headless)
+        run: dotnet test WolvenKit.Linux.sln --configuration Release --logger "console;verbosity=normal"
