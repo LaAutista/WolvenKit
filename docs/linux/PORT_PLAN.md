@@ -54,7 +54,7 @@ The Windows WPF app stays untouched and keeps building from the same tree, so up
 | Archive read / extract (CLI) | yes | **V** works | regression test with generated fixture |
 | Archive pack (CLI) | yes | **V** `ModTools.Pack` + sync/async extraction pass generated nested fixtures with Kraken | Codex M1a: CLI builds; direct CLI pack invocation not tested |
 | CR2W ↔ JSON convert | yes | untested | Codex M1 |
-| Kraken compress/decompress | yes | **V** compress levels 1–5 and decompress fixtures 1–6 pass; generated pack/extract at Normal passes | Codex: level 6 encoder aborts; explicit skipped test, see audit below |
+| Kraken compress/decompress | Windows CI encoder access violation; test path restored to its previous no-op (see §7) | **V** compress levels 1–5 and decompress fixtures 1–6 pass; generated pack/extract at Normal passes | Codex: level 6 encoder aborts; explicit skipped test, see audit below |
 | Oodle | optional | A: looks for `liboo2corelinux64.so` | document; Kraken is default |
 | Texture import/export (xbm ↔ dds/png/tga) | texconv.dll | **V** eight `Texconv` paths reject non-Windows with a descriptive platform exception; conversion unavailable | Codex M2: native backend + image codecs; audit below |
 | Mesh export/import glTF | yes | untested (SharpGLTF is managed) | Codex M2 test |
@@ -126,4 +126,21 @@ Generated archive tests call the real `ModTools.Pack`, `ArchiveReader`, and both
 
 Architecture response (Codex): no disagreement with Avalonia, the separate `WolvenKit.Linux` GUI head, or staged multi-targeting of `WolvenKit.App`. The successful library/test build without App demonstrates the existing library boundary is usable. Qualification: changing App's TFM alone is insufficient; its WPF-dependent project references and test types still need the planned platform separation. This task makes no claim about X11/Wayland rendering or one-to-one view reuse. Section 2 still says Avalonia 11; Claude's stated choice of 12.1.6 is owned by M1b and was not changed here.
 
-Publication status: local `git add`/`git commit` failed before any commit was made because Git's worktree metadata is read-only in this execution environment (`.../wolvenkit/.git/worktrees/wt-codex/index.lock`). The code and workflow are prepared in the authorized worktree; pushing, opening the PR, remote CI and cross-review await writable Git metadata. No merge has been attempted.
+Initial publication was blocked by read-only Git worktree metadata. Claude subsequently committed the M1a changes as `55550564d192e15ab529d4fb2dafc3f60324c9df` and opened fork PR #3. The Linux jobs and desktop-win build passed; the Windows Unit Tests host crashed as recorded below. Codex is leaving this follow-up uncommitted for Claude, as requested. No merge has been attempted.
+
+## 7. PR #3 Windows compression regression follow-up — 2026-11-15
+
+Finding: the fork's [Windows Unit Tests run at `55550564d1`](https://github.com/LaAutista/WolvenKit/actions/runs/43703779671/job/132780360676) aborts its test host with `0xC0000005`. Its stack names `KrakenNative.Kraken_Compress`, `KrakenNative.Compress`, and `CompressionTests.Kraken_Compress(Int32)`. Codex read the actual CI log; this is remote Windows evidence, not a local Windows reproduction. The M1a rewrite removed the old `#if _WINDOWS` guard, which was not defined in that workflow and previously compiled out the native compression body. The rewrite therefore enabled a previously unexecuted Windows encoder path. The crash does not establish its native root cause or whether other fixtures/levels fail.
+
+Fix: `CompressionTests.Kraken_Compress` now returns immediately outside Linux, before reading the fixture or calling native compression. This restores that test's previous no-op behavior on Windows. Linux retains byte-for-byte round trips for levels 1–5, the explicit known-crash skip at level 6, and generated archive pack/extract coverage. The production encoder is unchanged; repairing Windows `kraken.dll` is a separate finding, not claimed fixed by this test guard.
+
+Actual local verification after the guard change (CachyOS, SDK 10.0.403):
+
+```bash
+/home/kek/.local/share/recovery-toolchain/bin/dotnet test Tests/WolvenKit.UnitTests/WolvenKit.UnitTests.csproj --configuration Release --framework net10.0 --logger 'console;verbosity=normal'
+# Exit 0: 350 total, 349 passed, 1 skipped, 0 failed; 13.1415 seconds.
+git diff --check
+# Exit 0.
+```
+
+Log: `/tmp/wk-m1a-windows-guard-tests.log`. A Windows rerun of the updated commit is still required; this Linux run does not certify Windows CI. The Linux level-6 encoder abort also remains open.
