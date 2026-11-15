@@ -4,8 +4,14 @@ namespace WolvenKit.Linux.Services;
 public static class SafePaths
 {
     /// <summary>Absolute path with every symlink resolved, for the part of the path that exists.</summary>
-    public static string RealPath(string path)
+    public static string RealPath(string path) => RealPath(path, 0);
+
+    private static string RealPath(string path, int depth)
     {
+        if (depth > 40) // same limit the kernel uses for nested links
+        {
+            throw new IOException($"Too many levels of symbolic links: {path}");
+        }
         var current = Path.GetPathRoot(Path.GetFullPath(path))!;
         foreach (var part in Path.GetFullPath(path).Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
         {
@@ -14,7 +20,7 @@ public static class SafePaths
             var info = new DirectoryInfo(current);
             if (info.LinkTarget is not null && info.ResolveLinkTarget(true) is { } target) // LinkTarget is null for paths that do not exist yet
             {
-                current = RealPath(target.FullName);
+                current = RealPath(target.FullName, depth + 1);
             }
         }
         return current;

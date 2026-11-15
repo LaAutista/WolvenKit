@@ -106,4 +106,15 @@ public class SafePathsTests
 
         Assert.Equal(game, Assert.Single(GameLocator.FindInstalls(tmp.Path)).RootPath);
     }
+
+    [Fact]
+    public void Symlink_loop_in_steam_root_does_not_crash_discovery()
+    {
+        using var tmp = new TempDir();
+        // ~/.local/share/Steam -> ~/.local/share/Steam/child : resolving it never ends
+        Directory.CreateSymbolicLink(Path.Combine(tmp.Sub(".local", "share"), "Steam"), Path.Combine(tmp.Path, ".local", "share", "Steam", "child"));
+
+        Assert.Empty(GameLocator.FindInstalls(tmp.Path));
+        Assert.Throws<IOException>(() => SafePaths.RealPath(Path.Combine(tmp.Path, ".local", "share", "Steam", "x")));
+    }
 }
