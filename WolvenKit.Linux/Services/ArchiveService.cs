@@ -1,5 +1,4 @@
 using WolvenKit.Common.Services;
-using WolvenKit.Modkit.RED4;
 using WolvenKit.RED4.Archive;
 using WolvenKit.RED4.CR2W;
 
@@ -29,16 +28,28 @@ public sealed class ArchiveService
 
         return archive.Files.Values
             .OfType<FileEntry>()
-            // entry names use Windows separators; FileEntry.ShortName does not split them on Linux
+            // entry names use Windows separators; show and filter them as Linux paths
             .Select(f => new ArchiveEntry(f.FileName.Replace('\\', '/'), f.NameHash64, f.Size, archive))
             .OrderBy(e => e.Path, StringComparer.Ordinal)
             .ToList();
     }
 
-    /// <returns>Number of files written below <paramref name="outDir"/>.</returns>
-    public static int Extract(IEnumerable<ArchiveEntry> entries, string outDir)
+    /// <summary>
+    /// Extracts entries below <paramref name="outDir"/>. Every destination is validated first (see
+    /// <see cref="SafePaths.ResolveDestination"/>), so nothing is written if any entry is unsafe.
+    /// </summary>
+    /// <returns>Number of files written.</returns>
+    /// <exception cref="InvalidOperationException">An entry would escape the folder or land in a game install.</exception>
+    public static int Extract(IReadOnlyCollection<ArchiveEntry> entries, string outDir)
     {
-        var dir = new DirectoryInfo(outDir);
-        return entries.Sum(e => Math.Max(0, ModTools.ExtractSingle(e.Archive, e.Hash, dir)));
+        var realOut = SafePaths.RealPath(outDir);
+        var plan = entries.Select(e => (Entry: e, Dest: SafePaths.ResolveDestination(realOut, e.Path))).ToList();
+        foreach (var (entry, dest) in plan)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            using var fs = new FileStream(dest, FileMode.Create, FileAccess.Write);
+            ((FileEntry)entry.Archive.Files[entry.Hash]).Extract(fs);
+        }
+        return plan.Count;
     }
 }

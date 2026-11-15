@@ -7,24 +7,28 @@ namespace WolvenKit.Linux.Services;
 /// <param name="Source">Where it was found: Steam, Heroic or Manual.</param>
 public sealed record GameInstall(string RootPath, string Source)
 {
-    public string ExecutablePath => Path.Combine(RootPath, "bin", "x64", "Cyberpunk2077.exe");
-    public string ContentArchiveDir => Path.Combine(RootPath, "archive", "pc", "content");
+    public string RootPath { get; } = Path.TrimEndingDirectorySeparator(Path.GetFullPath(RootPath));
+
+    // the game resolves its own paths case-insensitively, so accept any spelling found on disk
+    public string ExecutablePath => SafePaths.ResolveIgnoreCase(RootPath, "bin", "x64", "Cyberpunk2077.exe")
+        ?? Path.Combine(RootPath, "bin", "x64", "Cyberpunk2077.exe");
 
     /// <summary>Base game, expansion and mod archives, in that order.</summary>
     public IEnumerable<string> EnumerateArchives()
     {
         foreach (var sub in new[] { "content", "ep1", "mod" })
         {
-            var dir = Path.Combine(RootPath, "archive", "pc", sub);
-            if (Directory.Exists(dir))
+            if (SafePaths.ResolveIgnoreCase(RootPath, "archive", "pc", sub) is { } dir && Directory.Exists(dir))
             {
-                foreach (var f in Directory.EnumerateFiles(dir, "*.archive").Order(StringComparer.Ordinal))
+                foreach (var f in Directory.EnumerateFiles(dir, "*.archive", s_ignoreCase).Order(StringComparer.Ordinal))
                 {
                     yield return f;
                 }
             }
         }
     }
+
+    private static readonly EnumerationOptions s_ignoreCase = new() { MatchCasing = MatchCasing.CaseInsensitive };
 
     public override string ToString() => $"{RootPath}  ({Source})";
 }
@@ -35,8 +39,8 @@ public static partial class GameLocator
     private const string SteamAppId = "1091500";
 
     public static bool IsGameRoot(string dir) =>
-        File.Exists(Path.Combine(dir, "bin", "x64", "Cyberpunk2077.exe")) &&
-        Directory.Exists(Path.Combine(dir, "archive", "pc", "content"));
+        File.Exists(SafePaths.ResolveIgnoreCase(dir, "bin", "x64", "Cyberpunk2077.exe")) &&
+        Directory.Exists(SafePaths.ResolveIgnoreCase(dir, "archive", "pc", "content"));
 
     public static IReadOnlyList<GameInstall> FindInstalls(string? home = null)
     {
@@ -49,10 +53,11 @@ public static partial class GameLocator
             {
                 return;
             }
-            var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir));
-            if (found.All(g => g.RootPath != full))
+            // real path, so the same install reached through two aliases is listed once
+            var install = new GameInstall(TryRealPath(dir), source);
+            if (found.All(g => g.RootPath != install.RootPath))
             {
-                found.Add(new GameInstall(full, source));
+                found.Add(install);
             }
         }
 
@@ -62,19 +67,17 @@ public static partial class GameLocator
             ".local/share/Steam", ".steam/steam", ".steam/root",
             ".var/app/com.valvesoftware.Steam/.local/share/Steam",
             "snap/steam/common/.local/share/Steam",
-        }.Select(r => ResolveLink(Path.Combine(home, r))).Distinct();
+        }.Select(r => TryRealPath(Path.Combine(home, r))).Distinct();
 
         foreach (var steam in steamRoots)
         {
             var vdf = Path.Combine(steam, "steamapps", "libraryfolders.vdf");
-            var libraries = File.Exists(vdf) ? ParseSteamLibraries(File.ReadAllText(vdf)).Append(steam) : [steam];
+            var libraries = ParseSteamLibraries(TryRead(vdf)).Append(steam);
             foreach (var lib in libraries.Distinct())
             {
                 var apps = Path.Combine(lib, "steamapps");
                 var manifest = Path.Combine(apps, $"appmanifest_{SteamAppId}.acf");
-                var installDir = File.Exists(manifest)
-                    ? InstallDirRegex().Match(File.ReadAllText(manifest)).Groups[1].Value
-                    : "";
+                var installDir = InstallDirRegex().Match(TryRead(manifest)).Groups[1].Value;
                 Add(Path.Combine(apps, "common", installDir.Length > 0 ? installDir : "Cyberpunk 2077"), "Steam");
             }
         }
@@ -143,16 +146,28 @@ public static partial class GameLocator
         }
     }
 
-    // shortcut: only resolves a symlink in the last path component, which covers ~/.steam/steam; upgrade to realpath if duplicates show up.
-    private static string ResolveLink(string path)
+    /// <summary>A missing or unreadable launcher file must not stop discovery of the other launchers.</summary>
+    private static string TryRead(string file)
     {
         try
         {
-            return new DirectoryInfo(path).ResolveLinkTarget(true)?.FullName ?? path;
+            return File.Exists(file) ? File.ReadAllText(file) : "";
         }
-        catch (IOException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            return path;
+            return "";
+        }
+    }
+
+    private static string TryRealPath(string path)
+    {
+        try
+        {
+            return SafePaths.RealPath(path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return Path.GetFullPath(path);
         }
     }
 

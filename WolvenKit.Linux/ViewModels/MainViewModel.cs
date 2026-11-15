@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<ArchiveEntry> _entries = [];
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private bool _isBusy;
+    private int _running; // operations in flight; IsBusy stays true until all are done
 
     /// <summary>The load started by the last archive selection; awaited by tests.</summary>
     public Task LoadTask { get; private set; } = Task.CompletedTask;
@@ -43,7 +44,8 @@ public partial class MainViewModel : ObservableObject
             Status = $"Not a Cyberpunk 2077 folder (bin/x64/Cyberpunk2077.exe missing): {dir}";
             return false;
         }
-        var install = Installs.FirstOrDefault(i => i.RootPath == dir) ?? new GameInstall(dir, "Manual");
+        var manual = new GameInstall(dir, "Manual");
+        var install = Installs.FirstOrDefault(i => i.RootPath == manual.RootPath) ?? manual;
         if (!Installs.Contains(install))
         {
             Installs.Add(install);
@@ -65,9 +67,16 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedInstallChanged(GameInstall? value)
     {
         Archives.Clear();
-        foreach (var archive in value?.EnumerateArchives() ?? [])
+        try
         {
-            Archives.Add(archive);
+            foreach (var archive in value?.EnumerateArchives() ?? [])
+            {
+                Archives.Add(archive);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Status = $"Could not list archives: {e.Message}";
         }
         SelectedArchive = null;
     }
@@ -85,7 +94,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        IsBusy = true;
+        Begin();
         Status = $"Reading {Path.GetFileName(path)}…";
         try
         {
@@ -100,11 +109,14 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            Status = $"Could not read {path}: {e.Message}";
+            if (SelectedArchive == path)
+            {
+                Status = $"Could not read {path}: {e.Message}";
+            }
         }
         finally
         {
-            IsBusy = false;
+            End();
         }
     }
 
@@ -113,19 +125,17 @@ public partial class MainViewModel : ObservableObject
             ? _allEntries
             : _allEntries.Where(e => e.Path.Contains(Filter, StringComparison.OrdinalIgnoreCase)).ToList();
 
+    private bool _extracting;
+
     public async Task ExtractAsync(IReadOnlyList<ArchiveEntry> entries, string outDir)
     {
-        if (entries.Count == 0)
+        if (entries.Count == 0 || _extracting)
         {
-            return;
-        }
-        if (Installs.Any(i => IsInside(outDir, i.RootPath)))
-        {
-            Status = "Refusing to extract into the game folder. Pick another folder.";
             return;
         }
 
-        IsBusy = true;
+        _extracting = true;
+        Begin();
         Status = $"Extracting {entries.Count} file(s)…";
         try
         {
@@ -134,14 +144,16 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            Status = $"Extract failed: {e.Message}";
+            Status = e is InvalidOperationException ? e.Message : $"Extract failed: {e.Message}";
         }
         finally
         {
-            IsBusy = false;
+            _extracting = false;
+            End();
         }
     }
 
-    private static bool IsInside(string path, string root) =>
-        (Path.GetFullPath(path) + Path.DirectorySeparatorChar).StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+    private void Begin() => IsBusy = ++_running > 0;
+
+    private void End() => IsBusy = --_running > 0;
 }
