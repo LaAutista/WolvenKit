@@ -61,7 +61,7 @@ public class FileEntry : ICyberGameFile
     public string NameOrHash => GetNameString(NameHash64.ToString())!;
     public string Extension => GetExtension();
 
-    public string ShortName => Path.GetFileName(FileName);
+    public string ShortName => Path.GetFileName(FileName.Replace('\\', Path.DirectorySeparatorChar));
 
     #endregion Properties
 

@@ -6,7 +6,13 @@
     <IsPackable>false</IsPackable>
     <Platforms>x64</Platforms>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Linux'))">net10.0</TargetFramework>
   </PropertyGroup>
+
+  <!-- App tests need the WPF project; texture tests need the Windows DirectXTex wrapper. -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <Compile Remove="App\**\*.cs;TexconvTests.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="Resources\1_oodle.kark" />
@@ -118,7 +124,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\WolvenKit.App\WolvenKit.App.csproj" />
+    <ProjectReference Include="..\..\WolvenKit.App\WolvenKit.App.csproj" Condition="!$([MSBuild]::IsOSPlatform('Linux'))" />
     <ProjectReference Include="..\..\WolvenKit.Core\WolvenKit.Core.csproj" />
       <ProjectReference Include="..\..\WolvenKit.Common\WolvenKit.Common.csproj" />
     <ProjectReference Include="..\..\WolvenKit.Modkit\WolvenKit.Modkit.csproj" />

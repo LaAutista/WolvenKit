@@ -1,9 +1,11 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace WolvenKit.Core;
 
 //https://stackoverflow.com/a/23623244
+[SupportedOSPlatform("windows")]
 public static class NativeMethods
 {
     [DllImport("kernel32.dll")]

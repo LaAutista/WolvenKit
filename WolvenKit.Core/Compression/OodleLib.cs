@@ -1,9 +1,11 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using static WolvenKit.Core.Compression.Oodle;
 
 namespace WolvenKit.Core.Compression
 {
+    [SupportedOSPlatform("windows")]
     internal static class OodleLib
     {
         private static IntPtr s_pDll = IntPtr.Zero;

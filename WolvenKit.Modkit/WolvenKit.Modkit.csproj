@@ -37,6 +37,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ClearScript.V8" />
     <PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" />
+    <PackageReference Include="Microsoft.ClearScript.V8.Native.linux-x64" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="NAudio.Lame" />
