@@ -4,9 +4,11 @@ using WolvenKit.Linux.Services;
 
 namespace WolvenKit.Linux.ViewModels;
 
-public partial class MainViewModel : ObservableObject
+/// <param name="settingsPath">Settings file; null keeps everything in memory (tests).</param>
+public partial class MainViewModel(string? settingsPath = null) : ObservableObject
 {
     private readonly ArchiveService _archives = new();
+    private readonly LinuxSettings _settings = settingsPath is null ? new() : LinuxSettings.Load(settingsPath);
     private IReadOnlyList<ArchiveEntry> _allEntries = [];
 
     public ObservableCollection<GameInstall> Installs { get; } = [];
@@ -30,6 +32,10 @@ public partial class MainViewModel : ObservableObject
         {
             Installs.Add(install);
         }
+        foreach (var dir in _settings.GameFolders.Where(d => GameLocator.IsGameRoot(d) && Installs.All(i => i.RootPath != d)))
+        {
+            Installs.Add(new GameInstall(dir, "Manual"));
+        }
         SelectedInstall = Installs.FirstOrDefault();
         Status = Installs.Count == 0
             ? "No Cyberpunk 2077 install found. Use \"Add game folder…\"."
@@ -49,6 +55,18 @@ public partial class MainViewModel : ObservableObject
         if (!Installs.Contains(install))
         {
             Installs.Add(install);
+            if (settingsPath is not null && !_settings.GameFolders.Contains(dir))
+            {
+                _settings.GameFolders.Add(dir);
+                try
+                {
+                    _settings.Save(settingsPath);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Status = $"Could not save settings: {e.Message}";
+                }
+            }
         }
         SelectedInstall = install;
         return true;
