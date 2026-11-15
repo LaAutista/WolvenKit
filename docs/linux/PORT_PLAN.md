@@ -21,7 +21,7 @@ Upstream Linux history: issues #316, #1989, #2329, #2996, #694, #903, #2657 — 
 
 ## 2. Chosen stack
 
-**Avalonia 11 (MIT) for the GUI, in new projects, reusing the existing libraries and view models.**
+**Avalonia 12 (MIT, 12.1.6) for the GUI, in new projects, reusing the existing libraries and view models.**
 
 Why, compared with the alternatives:
 
@@ -60,9 +60,9 @@ The Windows WPF app stays untouched and keeps building from the same tree, so up
 | Mesh export/import glTF | yes | untested (SharpGLTF is managed) | Codex M2 test |
 | Audio (wem/opus) | exe tools + NAudio | partially (libwwtools.so present), opus `.exe` not usable | Codex M3: use system `opus-tools` |
 | Scripting (ClearScript V8) | yes | **broken**, win-x64 native only | Codex M2: add `ClearScript.V8.Native.linux-x64` |
-| Game detection (Steam, Heroic/GOG, Proton) | registry | none | **Claude M1** |
-| GUI shell, docking, settings | WPF | none | **Claude M1–M2** |
-| Archive/asset browser | WPF | none | **Claude M1** |
+| Game detection (Steam native/Flatpak/Snap, Heroic GOG/Epic, manual folder) | registry | **V** works (`GameLocator`, unit tests; real Heroic install found). Lutris/Bottles not covered yet | Claude M2: Lutris |
+| GUI shell | WPF | **V** Avalonia window starts on X11 (LXQt). Wayland untested. No docking/settings yet | Claude M2 |
+| Archive browser | WPF | **V** per-archive file list, filter, extract selection (refuses to write into the game folder). No cross-archive tree/search yet | Claude M2 |
 | Project explorer, new/open project, pack & install | WPF | none | Claude M2 |
 | Red file (CR2W) tree editor | WPF + Syncfusion | none | Claude M3 |
 | Text/script/tweak editor | AvalonEdit | none | Claude M3 (AvaloniaEdit) |
@@ -94,4 +94,9 @@ Each milestone ends with a cross-review PR into `linux/main` and a note in the c
 dotnet build WolvenKit.CLI/WolvenKit.CLI.csproj                       # 0 errors (2026-11-15)
 dotnet WolvenKit.CLI/bin/Debug/net10.0/WolvenKit.CLI.dll unbundle <game>/archive/pc/content/basegame_2_mainmenu.archive -o <tmp>
                                                                       # Unbundled 53/53 entries
+dotnet test Tests/WolvenKit.Linux.Tests/WolvenKit.Linux.Tests.csproj  # Passed 7/7 (2026-11-15): game detection, headless window, pack->list->extract round trip
+dotnet run --project WolvenKit.Linux -- <game>/archive/pc/content/basegame_2_mainmenu.archive
+                                                                      # window shows Heroic install, its archive list (57 archives on disk), 53 files (screenshot taken on X11)
 ```
+
+Not verified yet for M1b: native file dialogs and the Extract button were not clicked by hand (the extract code path is covered by the headless test); Wayland session.
