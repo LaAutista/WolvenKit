@@ -274,7 +274,7 @@ namespace WolvenKit.UnitTests
                     gottenString += keys[(int)idx].ToString();
                     if (i < hashDictionary[hash].Length - 1)
                     {
-                        gottenString += Path.DirectorySeparatorChar;
+                        gottenString += '\\'; // Archive paths use backslashes on every OS.
                     }
                 }
 

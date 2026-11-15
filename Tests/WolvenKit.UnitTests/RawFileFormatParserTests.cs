@@ -1,5 +1,7 @@
 using System;
+#if WINDOWS
 using WolvenKit.App.Helpers;
+#endif
 using WolvenKit.Common;
 using Xunit;
 
@@ -22,7 +24,9 @@ public class RawFileFormatParserTests
     {
         Assert.True(RawFileFormatParser.TryParse(extension, out var format));
         Assert.Equal(expected, format);
+#if WINDOWS
         Assert.True(ImportExportHelper.CanImportFilepath("texture_d." + extension.TrimStart('.')));
+#endif
     }
 
     [Fact]

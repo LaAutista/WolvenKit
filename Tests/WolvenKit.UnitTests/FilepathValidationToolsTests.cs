@@ -14,7 +14,6 @@ namespace WolvenKit.UnitTests
         [DataTestMethod]
         [DataRow("valid/path/file.txt", true)]
         [DataRow("valid\\path\\file.txt", true)]
-        [DataRow("invalid|path.txt", false)]
         [DataRow("path/ /file.txt", false)] // trimmed check
         [DataRow("path/..../file.txt", false)] // InvalidPathTraversal
         [DataRow("path/.. /file.txt", false)] // trimmed check or traversal
@@ -30,7 +29,6 @@ namespace WolvenKit.UnitTests
 
         [DataTestMethod]
         [DataRow("file.txt", true)]
-        [DataRow("file|txt", false)]
         [DataRow("folder/file.txt", false)]
         [DataRow("...", false)]
         public void IsOsFileNameValid_Tests(string name, bool expected)
@@ -40,8 +38,6 @@ namespace WolvenKit.UnitTests
 
         [DataTestMethod]
         [DataRow("valid/path/file.txt", "valid\\path\\file.txt")]
-        [DataRow("invalid|path.txt", "invalidpath.txt", "")]
-        [DataRow("invalid|path.txt", "invalid_path.txt", "_")]
         [DataRow("path/   /file.txt", "path\\file.txt")] // empty segment removed
         [DataRow("path/..../file.txt", "path\\file.txt")] // traversal replaced by replacement (empty) -> empty segment removed
         [DataRow("folder/...", "folder")] // last segment traversal/dots removed
@@ -56,11 +52,23 @@ namespace WolvenKit.UnitTests
 
         [DataTestMethod]
         [DataRow("folder/file.txt", "file.txt")]
-        [DataRow("file|txt", "filetxt", "")]
-        [DataRow("file|txt", "file_txt", "_")]
         public void SanitizeOsFileName_Tests(string name, string expected, string replacement = "")
         {
             Assert.AreEqual(expected, FilepathValidationTools.SanitizeOsFileName(name, replacement), $"Name: {name}");
+        }
+
+        [DataTestMethod]
+        [DataRow("")]
+        [DataRow("_")]
+        public void OsPipeCharacter_FollowsPlatformRules(string replacement)
+        {
+            var isWindows = OperatingSystem.IsWindows();
+            Assert.AreEqual(!isWindows, FilepathValidationTools.IsOsFilePathValid("folder/file|txt"));
+            Assert.AreEqual(!isWindows, FilepathValidationTools.IsOsFileNameValid("file|txt"));
+            var expectedName = isWindows ? $"file{replacement}txt" : "file|txt";
+            Assert.AreEqual(expectedName, FilepathValidationTools.SanitizeOsFileName("file|txt", replacement));
+            Assert.AreEqual(Path.Combine("folder", expectedName),
+                FilepathValidationTools.SanitizeOsFilePath("folder/file|txt", replacement));
         }
 
         #endregion
